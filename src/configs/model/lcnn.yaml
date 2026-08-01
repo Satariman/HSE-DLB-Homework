@@ -1,0 +1,3 @@
+_target_: src.model.LCNNModel
+in_channels: 1
+dropout_probability: 0.75

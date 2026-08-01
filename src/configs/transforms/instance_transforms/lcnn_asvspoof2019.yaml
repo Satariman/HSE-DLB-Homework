@@ -1,0 +1,44 @@
+train:
+  data_object:
+    _target_: torchvision.transforms.v2.Compose
+    transforms:
+      - _target_: src.transforms.LFCCEnergy
+        smpl_rate: 16000
+        n_filter: 20
+        n_lfcc: 20
+        n_fft: 512
+        frm_length_ms: 20
+        frm_shift_ms: 10
+        log_lf: true
+
+      - _target_: src.transforms.StackDelts
+        delta_win_length: 5
+
+      - _target_: src.transforms.Swap2LastCords
+
+      - _target_: src.transforms.TrimPad
+        target_frames: 750
+
+      - _target_: src.transforms.AddDimension
+inference:
+  data_object:
+    _target_: torchvision.transforms.v2.Compose
+    transforms:
+      - _target_: src.transforms.LFCCEnergy
+        smpl_rate: 16000
+        n_filter: 20
+        n_lfcc: 20
+        n_fft: 512
+        frm_length_ms: 20
+        frm_shift_ms: 10
+        log_lf: true
+
+      - _target_: src.transforms.StackDelts
+        delta_win_length: 5
+
+      - _target_: src.transforms.Swap2LastCords
+
+      - _target_: src.transforms.TrimPad
+        target_frames: 750
+
+      - _target_: src.transforms.AddDimension

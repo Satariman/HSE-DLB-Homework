@@ -5,20 +5,19 @@ defaults:
   - transforms: lcnn_asvspoof2019
   - _self_
 
-# Inference runs only the official Logical Access evaluation partition.
 datasets:
   eval:
     _target_: src.datasets.ASVspoof2019LADataset
-    audio_dir: "D:/Programming solutions/Python solutions/.idea/Datasets/ASVspoof2019/LA/LA/ASVspoof2019_LA_eval/flac"
-    protocol_path: "D:/Programming solutions/Python solutions/.idea/Datasets/ASVspoof2019/LA/LA/ASVspoof2019_LA_cm_protocols/ASVspoof2019.LA.cm.eval.trl.txt"
+    audio_dir: "C:/Datasets/ASVspoof2019/LA/LA/ASVspoof2019_LA_eval/flac"
+    protocol_path: "C:/Datasets/ASVspoof2019/LA/LA/ASVspoof2019_LA_cm_protocols/ASVspoof2019.LA.cm.eval.trl.txt"
     shuffle_index: false
     instance_transforms: ${transforms.instance_transforms.inference}
 
 inferencer:
   device_tensors: ["data_object", "labels"]
   device: auto
-  # The Inferencer writes one output file per trial under data/saved/<save_path>/eval.
-  save_path: "asvspoof2019_la_eval"
+  non_blocking: True
+  save_path: null
+  submission_path: "C:/Users/russi/Downloads/students_solutions/mnbasin.csv"
   seed: 1
-  # Replace this with the checkpoint produced by training.
   from_pretrained: "saved/testing/model_best.pth"

@@ -1,3 +1,5 @@
+train: []
+
 inference:
-  - _target_:src.metrics.EER
-  - device: cpu
+  - _target_: src.metrics.EER
+    name: EER

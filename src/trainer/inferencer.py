@@ -1,3 +1,6 @@
+import csv
+from pathlib import Path
+
 import torch
 from tqdm.auto import tqdm
 
@@ -124,31 +127,30 @@ class Inferencer(BaseTrainer):
 
         if metrics is not None:
             for met in self.metrics["inference"]:
-                metrics.update(met.name, met(**batch))
+                if getattr(met, "requires_full_dataset", False):
+                    met.update(**batch)
+                else:
+                    metrics.update(met.name, met(**batch))
 
-        # Some saving logic. This is an example
-        # Use if you need to save predictions on disk
+        submission_path = self.cfg_trainer.get("submission_path")
+        if submission_path is not None:
+            if "utterance_id" not in batch:
+                raise ValueError("Submission saving requires utterance_id metadata.")
 
-        batch_size = batch["logits"].shape[0]
-        current_id = batch_idx * batch_size
+            submission_path = Path(submission_path)
+            submission_path.parent.mkdir(exist_ok=True, parents=True)
+            mode = "w" if batch_idx == 0 else "a"
 
-        for i in range(batch_size):
-            # clone because of
-            # https://github.com/pytorch/pytorch/issues/1995
-            logits = batch["logits"][i].clone()
-            label = batch["labels"][i].clone()
-            pred_label = logits.argmax(dim=-1)
+            scores = (
+                batch["logits"][:, 0] - batch["logits"][:, 1]
+            ).detach().cpu().tolist()
 
-            output_id = current_id + i
-
-            output = {
-                "pred_label": pred_label,
-                "label": label,
-            }
-
-            if self.save_path is not None:
-                # you can use safetensors or other lib here
-                torch.save(output, self.save_path / part / f"output_{output_id}.pth")
+            with submission_path.open(mode, newline="", encoding="utf-8") as csv_file:
+                writer = csv.writer(csv_file)
+                writer.writerows(
+                    (utterance_id, f"{score:.10f}")
+                    for utterance_id, score in zip(batch["utterance_id"], scores)
+                )
 
         return batch
 
@@ -167,6 +169,10 @@ class Inferencer(BaseTrainer):
         self.model.eval()
 
         self.evaluation_metrics.reset()
+        if self.metrics is not None:
+            for met in self.metrics["inference"]:
+                if getattr(met, "requires_full_dataset", False):
+                    met.reset()
 
         # create Save dir
         if self.save_path is not None:
@@ -184,5 +190,10 @@ class Inferencer(BaseTrainer):
                     part=part,
                     metrics=self.evaluation_metrics,
                 )
+
+            if self.metrics is not None:
+                for met in self.metrics["inference"]:
+                    if getattr(met, "requires_full_dataset", False):
+                        self.evaluation_metrics.update(met.name, met.compute())
 
         return self.evaluation_metrics.result()

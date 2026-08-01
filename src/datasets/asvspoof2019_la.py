@@ -32,6 +32,7 @@ class ASVspoof2019LADataset(BaseDataset):
                     {
                         "path": str(self.audio_dir / f"{fields[1]}.flac"),
                         "label": self.LABEL_TO_ID[fields[4]],
+                        "utterance_id": fields[1],
                     }
                 )
 

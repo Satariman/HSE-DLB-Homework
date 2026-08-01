@@ -1,4 +1,5 @@
 import warnings
+from pathlib import Path
 
 import hydra
 import torch
@@ -40,9 +41,12 @@ def main(config):
     # get metrics
     metrics = instantiate(config.metrics)
 
-    # save_path for model predictions
-    save_path = ROOT_PATH / "data" / "saved" / config.inferencer.save_path
-    save_path.mkdir(exist_ok=True, parents=True)
+    # Prediction saving is optional. Set inferencer.save_path to null when
+    # only aggregate metrics (for example, EER) are needed.
+    save_path = None
+    if config.inferencer.save_path is not None:
+        save_path = ROOT_PATH / "data" / "saved" / config.inferencer.save_path
+        save_path.mkdir(exist_ok=True, parents=True)
 
     inferencer = Inferencer(
         model=model,
@@ -57,10 +61,21 @@ def main(config):
 
     logs = inferencer.run_inference()
 
+    result_lines = []
     for part in logs.keys():
         for key, value in logs[part].items():
             full_key = part + "_" + key
             print(f"    {full_key:15s}: {value}")
+            result_lines.append(f"{full_key}: {value}")
+
+    results_path = config.inferencer.get("results_path")
+    if results_path is not None:
+        results_path = Path(results_path)
+        if not results_path.is_absolute():
+            results_path = ROOT_PATH / results_path
+        results_path.parent.mkdir(exist_ok=True, parents=True)
+        results_path.write_text("\n".join(result_lines) + "\n", encoding="utf-8")
+        print(f"Results saved to: {results_path}")
 
 
 if __name__ == "__main__":

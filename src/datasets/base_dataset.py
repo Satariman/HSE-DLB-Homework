@@ -61,6 +61,8 @@ class BaseDataset(Dataset):
         data_label = data_dict["label"]
 
         instance_data = {"data_object": data_object, "labels": data_label}
+        if "utterance_id" in data_dict:
+            instance_data["utterance_id"] = data_dict["utterance_id"]
         instance_data = self.preprocess_data(instance_data)
 
         return instance_data

@@ -240,6 +240,9 @@ class BaseTrainer:
             if batch_idx + 1 >= self.epoch_len:
                 break
 
+        if self.lr_scheduler is not None:
+            self.lr_scheduler.step()
+
         logs = last_train_metrics
 
         # Run val/test
@@ -263,6 +266,10 @@ class BaseTrainer:
         self.is_train = False
         self.model.eval()
         self.evaluation_metrics.reset()
+        for met in self.metrics["inference"]:
+            if getattr(met, "requires_full_dataset", False):
+                met.reset()
+
         with torch.no_grad():
             for batch_idx, batch in tqdm(
                 enumerate(dataloader),
@@ -273,6 +280,11 @@ class BaseTrainer:
                     batch,
                     metrics=self.evaluation_metrics,
                 )
+
+            for met in self.metrics["inference"]:
+                if getattr(met, "requires_full_dataset", False):
+                    self.evaluation_metrics.update(met.name, met.compute())
+
             self.writer.set_step(epoch * self.epoch_len, part)
             self._log_scalars(self.evaluation_metrics)
             self._log_batch(
@@ -345,7 +357,10 @@ class BaseTrainer:
                 the dataloader with some of the tensors on the device.
         """
         for tensor_for_device in self.cfg_trainer.device_tensors:
-            batch[tensor_for_device] = batch[tensor_for_device].to(self.device)
+            batch[tensor_for_device] = batch[tensor_for_device].to(
+                self.device,
+                non_blocking=self.cfg_trainer.get("non_blocking", False),
+            )
         return batch
 
     def transform_batch(self, batch):
